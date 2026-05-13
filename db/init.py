@@ -1,29 +1,29 @@
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from config import DB_URL
-from db.models import Base
-
-engine = create_engine(DB_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from sqlalchemy import text
+from db.session import engine
+from db.repositories.logger import log
+from db.models.logger import LogLevel
 
 
-def run_migrations():
-    migration_file = "migration.sql"
-    if os.path.exists(migration_file):
+def run_migrations(dir_path):
+    if not os.path.exists(dir_path):
+        log(LogLevel.ERROR, "Migrations folder doesn't exist.")
+        return 
+    migrations = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+    for i in migrations:
         try:
             with engine.connect() as connection:
-                with open(migration_file, 'r') as f:
+                with open(os.path.join(dir_path, i), 'r') as f:
                     migration_sql = f.read()
-                    connection.execute(migration_sql)
-                    print("Migrations applied successfully.")
+                    connection.execute(text(migration_sql))
+                    connection.commit()
+                    log(LogLevel.INFO, f"Migration {i} applied successfully.")
         except Exception as e:
-            print(f"Error applying migrations: {e}")
+            log(LogLevel.ERROR, f"Error applying migration {i}: {e}")
 
 
 def init_db():
     try:
-        run_migrations()
-        Base.metadata.create_all(bind=engine)
+        run_migrations("db/migrations")
     except Exception as e:
-        print(f"Error initializing the database: {e}")
+        log(LogLevel.ERROR, f"Error initializing the database: {e}")
