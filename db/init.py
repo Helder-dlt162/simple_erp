@@ -9,14 +9,17 @@ def run_migrations(dir_path):
     if not os.path.exists(dir_path):
         log(LogLevel.ERROR, "Migrations folder doesn't exist.")
         return 
-    migrations = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+    migrations = sorted([
+        f for f in os.listdir(dir_path)
+        if os.path.isfile(os.path.join(dir_path, f))
+        and f.endswith(".sql")
+    ])
     for i in migrations:
         try:
-            with engine.connect() as connection:
-                with open(os.path.join(dir_path, i), 'r') as f:
+            with engine.begin() as connection:
+                with open(os.path.join(dir_path, i), 'r', encoding="utf-8") as f:
                     migration_sql = f.read()
                     connection.execute(text(migration_sql))
-                    connection.commit()
                     log(LogLevel.INFO, f"Migration {i} applied successfully.")
         except Exception as e:
             log(LogLevel.ERROR, f"Error applying migration {i}: {e}")
