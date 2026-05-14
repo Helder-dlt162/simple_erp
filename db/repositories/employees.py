@@ -1,9 +1,7 @@
-from db.repositories.logger import log
-from db.models.logger import LogLevel
+from utils.employee_repo import generate_employee_id
+from utils.exception_repo import repo_exception
 from db.models.users import Employees
 from db.session import SessionLocal
-import uuid
-
 
 # Create
 def create_employee(first_name, cpf):
@@ -20,16 +18,6 @@ def create_employee(first_name, cpf):
         return employee_id
     except Exception as e:
         session.rollback()
-        log(LogLevel.ERROR, f"Error while creating employee: {e}")
+        repo_exception("Error while creating employee", e, 500)
     finally:
         session.close()
-
-
-def generate_employee_id(session):
-    while True:
-        employee_id = f"EMP-{uuid.uuid4().hex[:12].upper()}"
-        exists = session.query(Employees).filter_by(
-            employee_id=employee_id
-        ).first()
-        if not exists:
-            return employee_id
