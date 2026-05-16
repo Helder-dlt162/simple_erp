@@ -1,4 +1,4 @@
-from db.models.users import Users
+from db.models.users import Users, Employees
 from db.session import SessionLocal
 from werkzeug.security import generate_password_hash
 from utils.exception_repo import repo_exception
@@ -80,6 +80,40 @@ def update_user(id, data):
     except Exception as e:
         session.rollback()
         repo_exception("Error while updating user", e, 500)
+    finally:
+        session.close()
+
+
+def attach_employee_to_user(user_id, employee_id):
+    session = SessionLocal()
+    try:
+        user = session.query(Users).filter_by(
+            id=user_id
+        ).first()
+        if not user:
+            return None
+        employee = session.query(Employees).filter_by(
+            employee_id=employee_id
+        ).first()
+        if not employee:
+            return None
+        employee_in_use = session.query(Users).filter_by(
+            employee_id=employee_id
+        ).first()
+        if employee_in_use:
+            return {
+                "error": "Employee already linked to another user"
+            }
+        user.employee_id = employee_id
+        session.commit()
+        session.refresh(user)
+        return {
+            "user_id": user.id,
+            "employee_id": user.employee_id
+        }
+    except Exception as e:
+        session.rollback()
+        repo_exception("Error while attaching employee to user", e, 500)
     finally:
         session.close()
 
